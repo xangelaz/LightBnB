@@ -10,7 +10,7 @@ const pool = new Pool({
   host: 'localhost',
   database: 'lightbnb'
 });
-pool.query(`SELECT title FROM properties LIMIT 10;`).then(response => {console.log()})
+pool.query(`SELECT title FROM properties LIMIT 10;`).then(response => {})
 
 /// Users
 
@@ -27,8 +27,12 @@ const getUserWithEmail = function (email) {
     WHERE users.email = $1
     `, [email])
     .then((result) => {
+      if (result.rows.length === 0) {
+        return null;
+      } else {
       console.log(result.rows[0]);
       return result.rows[0];
+      }
     })
     .catch((err) => {
       console.log(err.message);
@@ -48,8 +52,12 @@ const getUserWithId = function (id) {
     WHERE users.id = $1
     `, [id])
     .then((result) => {
+      if (result.rows.length === 0) {
+        return null;
+      } else {
       console.log(result.rows[0]);
       return result.rows[0];
+      }
     })
     .catch((err) => {
       console.log(err.message);
