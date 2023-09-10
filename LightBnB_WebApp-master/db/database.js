@@ -1,6 +1,3 @@
-const properties = require("./json/properties.json");
-const users = require("./json/users.json");
-
 // Connect to PostgreSQL
 const { Pool } = require('pg');
 
@@ -27,8 +24,10 @@ const getUserWithEmail = function(email) {
     WHERE users.email = $1
     `, [email])
     .then((result) => {
+      // if no user with the given email is present, returns null
       if (result.rows.length === 0) {
         return null;
+        // else resolves with a user object with the given email address
       } else {
         console.log(result.rows[0]);
         return result.rows[0];
@@ -52,8 +51,10 @@ const getUserWithId = function(id) {
     WHERE users.id = $1
     `, [id])
     .then((result) => {
+      // if no user with the given id is present, returns null
       if (result.rows.length === 0) {
         return null;
+        // else resolves with a user object with the given user id
       } else {
         console.log(result.rows[0]);
         return result.rows[0];
@@ -71,6 +72,7 @@ const getUserWithId = function(id) {
  */
 const addUser = function(user) {
   return pool
+    // RETURNING * below returns the objects that were inserted
     .query(`
       INSERT INTO users (name, email, password)
       VALUES ($1, $2, $3)
@@ -122,15 +124,17 @@ const getAllReservations = function(guest_id, limit = 10) {
  * @return {Promise<[{}]>}  A promise to the properties.
  */
 const getAllProperties = (options, limit = 10) => {
-  
+  // empty array to hold any parameters that may be available for the query
   const queryParams = [];
   
+  // initial query with all information that comes before the WHERE clauses
   let queryString = `
   SELECT properties.*, avg(property_reviews.rating) as average_rating
   FROM properties
   JOIN property_reviews ON properties.id = property_id
   `;
 
+  // use WHERE keyword to start. This changes to AND later when needed. 
   let conditionWord = 'WHERE';
 
   for (const key in options) {
@@ -138,11 +142,14 @@ const getAllProperties = (options, limit = 10) => {
       continue;
     } else if (key === 'owner_id') {
       queryParams.push(`${options[key]}`);
+      // use .length to get the $n placeholder number
       queryString += `${conditionWord} owner_id = $${queryParams.length}`;
     } else if (key === 'city') {
+      // include %% for using with LIKE so City will show up in search
       queryParams.push(`%${options[key]}%`);
       queryString += `${conditionWord} city LIKE $${queryParams.length}`;
     } else {
+      // multiply options[key] with 100 since price is in cents in the database
       queryParams.push(`${options[key] * 100}`);
 
       if (key === 'minimum_price_per_night') {
@@ -153,18 +160,20 @@ const getAllProperties = (options, limit = 10) => {
         queryString += `${conditionWord} cost_per_night <= $${queryParams.length}`;
       }
     }
-    
+    // change conditionWord to AND after initial use of WHERE if WHERE is used
     conditionWord = ' AND';
   }
 
   queryString += `
   GROUP BY properties.id
   `;
+  // if statement is below the for loop so the HAVING occurs after the GROUP BY
   if (options.minimum_rating) {
     queryParams.push(`${options.minimum_rating}`);
     queryString += `HAVING avg(rating) >= $${queryParams.length}`;
   }
 
+  // query that comes after the WHERE clauses (if any)
   queryParams.push(limit);
   queryString += `
   ORDER BY cost_per_night
